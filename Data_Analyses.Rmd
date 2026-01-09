@@ -1,10 +1,3 @@
----
-title: "Carbon et al. 2026 Statistical Analysis and Figure-making code"
-author: "Chris Carbon"
-date: "2026-01-08"
-output: html_document
----
-
 ##Stable Isotope and Tissue Nutrient Data##
 ```{r}
 #Read in the raw stable isotope and tissue nutrient data file
@@ -203,5 +196,85 @@ Ik.aov <- aov(sqrt(RLC.bal$Ik) ~ Site * Month * Species, data = RLC.bal)
 Ik.aov
 summary(Ik.aov) # Significant differences found due to factors of Site, Month, Species, Site x Month, & Month x Species
 Ik.Tukey <- TukeyHSD(Ik.aov)
+
+##Conducting PCA on all data variables
+
+#Need to assign a common key to all datasets to that each datapoint has a unique sample identifier. This will be used by the PCA to merge the datasets correctly
+library(dplyr)
+
+#Creating sample IDs from existing files
+N15.balanced$SampleID <- paste(N15.balanced$Site, N15.balanced$Month, N15.balanced$Species, sep = "_")
+bact.bal$SampleID <- paste(bact.bal$Site, bact.bal$Month, bact.bal$Species, sep = "_")
+RLC.bal$SampleID <- paste(RLC.bal$Site, RLC.bal$Month, RLC.bal$Species, sep = "_")
+nuts$SampleID <- paste(nuts$Site, nuts$Month, sep = "_")
+
+
+#Summarizing the data so that there is only one row for each unique row per month, site, and species.
+
+#Summarizing RLC Data
+RLC.bal.summary <- RLC.bal %>%
+  group_by(Site, Month, Species) %>%
+  summarize(
+    Y = mean(Y, na.rm = TRUE),
+    ETRmax = mean(ETRmax, na.rm = TRUE),
+    Ik = mean(Ik, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+#Summarizing N15 Data
+N15.bal.summary <- N15.balanced %>%
+  group_by(Site, Month, Species) %>%
+  summarize(
+    N15 = mean(N15, na.rm = TRUE),
+    Percent.N = mean(Percent.N, na.rm = TRUE),
+    C.N = mean(C.N, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+#Summarizing Bacteria Data
+bact.bal.summary <- bact.bal %>%
+  group_by(Site, Month, Species) %>%
+  summarize(
+    E.coli = mean(E.coli, na.rm = TRUE),
+    Coliform = mean(Coliform, na.rm = TRUE),
+    V.cholerae = mean(V.cholerae, na.rm = TRUE),
+    V.parahaemolyticus = mean(V.parahaemolyticus, na.rm = TRUE),
+    Temp = mean(Temp, na.rm = TRUE),
+    Salinity = mean(Salinity, na.rm = TRUE), 
+    .groups = "drop")
+
+#Summarizing Nutrient Data
+nuts.summary <- nuts %>%
+  group_by(Site, Month) %>%
+  summarize(
+    Ammonium.uM = mean(Ammonium.uM, na.rm = TRUE),
+    Nitrate.uM = mean(Nitrate.uM, na.rm = TRUE),
+    Phosphate.uM = mean(Phosphate.uM, na.rm = TRUE),
+    .groups = "drop"
+  )
+  
+#Merging all the summariuzed data sets
+merged.data <- N15.bal.summary %>%
+  inner_join(bact.bal.summary, by = c("Site", "Month", "Species")) %>%
+  inner_join(RLC.bal.summary, by = c("Site", "Month", "Species")) %>%
+  inner_join(nuts.summary, by = c("Site", "Month")) %>%
+  inner_join(rainfall, by = "Month")
+
+#Conducting PCA on merged data
+all.vars.PCA <- merged.data %>%
+  dplyr::select(N15, Percent.N, C.N, 
+         E.coli, Coliform, V.cholerae, V.parahaemolyticus,
+         Salinity, Temp,
+         Y, ETRmax, Ik, Rainfall.cm, Ammonium.uM, Nitrate.uM, Phosphate.uM)
+
+
+apply(all.vars.PCA, 2, function(x) var(x, na.rm = TRUE))  # Should return all > 0
+any(is.na(all.vars.PCA))  # Should be FALSE -> IT IS!
+
+all.vars.PCA.result <- prcomp(all.vars.PCA, center = TRUE, scale. = TRUE)
+
+all.vars.PCA.result
+summary(all.vars.PCA.result)
+```
 ```
 
