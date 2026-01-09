@@ -1,0 +1,207 @@
+---
+title: "Carbon et al. 2026 Statistical Analysis and Figure-making code"
+author: "Chris Carbon"
+date: "2026-01-08"
+output: html_document
+---
+
+##Stable Isotope and Tissue Nutrient Data##
+```{r}
+#Read in the raw stable isotope and tissue nutrient data file
+N15 <- read.csv("./Stable Isotope Data/Stable_Isotope_Mastersheet.csv")
+N15
+
+#Subset the data to remove data from months that had unequal replication across all sites
+library(dplyr)
+library(car)
+N15.balanced <- N15 %>%
+  filter(!Month %in% c("Sept.23", "Dec", "Jan.24", "Mar"))
+(N15.balanced)
+
+#Testing balanced N15 data for ANOVA assumptions
+shapiro.test(N15.balanced$N15) # p.val = 1.108e-7, able to reject the null that the data comes from a normal distribution.
+shapiro.test(N15.balanced$N15) # p.val = 1.579e-07, data is not normal
+#Inverse transform N15 data to acheive normal distribution
+N15.bal.inver <- 1/N15.balanced$N15
+shapiro.test(N15.bal.inver) # p.val = 0.2676, data is normnally distributed.
+
+#Checking for equal variance
+leveneTest(N15.bal.inver ~ Site * Month * Species, data = N15.balanced) #p/val = 0.401, unable to reject the null that the data have equal variance
+
+#Preforming three-way ANOVA on 
+N15.bal.aov <-aov(N15.bal.inver ~ Site * Month * Species, data = N15.balanced)
+summary(N15.bal.aov)
+
+#Post hoc Tukey HSD test
+N15.bal.Tukey <- TukeyHSD(N15.bal.aov) #Same findings as the unbalanced ANOVA
+N15.bal.Tukey
+
+#Now analyzing %N with the balanced dataset using a 3-way ANOVA.
+
+shapiro.test(N15.balanced$Percent.N) #p/val = 0.0889, data does not reject the null that it is normally distributed
+
+leveneTest(N15.balanced$Percent.N ~ Site * Month * Species, data = N15.balanced) # p = 0.9964, data fails to reject null that data has equal variance
+
+Percent.N.bal.aov <- aov(Percent.N ~ Site * Month * Species , data = N15.balanced)
+summary(Percent.N.bal.aov)
+
+Percent.N.Tukey <- TukeyHSD(Percent.N.bal.aov) 
+Percent.N.Tukey
+
+#Checking for ANOVA assumptions in the C:N data
+shapiro.test(N15.balanced$C.N) # p = 0.01382, data is not normally distributed
+
+shapiro.test(sqrt(N15.balanced$C.N)) #sqrt transformation
+
+
+C.N.sqrt <- sqrt(N15.balanced$C.N) #p.val. = 0.9195, data are normally distributed
+
+leveneTest(C.N.sqrt ~ Site * Month * Species, data = N15.balanced) # p.val = 0.9195, data fails to reject the null that the data has unequal variance
+
+
+bal.C.N.aov <- aov(C.N.sqrt ~ Site * Month * Species, data = N15.balanced)
+summary(bal.C.N.aov)
+C.N.bal.aov.tukey <- TukeyHSD(bal.C.N.aov) #More significant findings with the balanced data frame than the  unbalanced one.
+```
+
+#Dissolved water nutrient analyses
+```{r}
+#Read in data
+nuts <- read.csv("./Water_Nutrient_Data.csv")
+
+nuts
+
+#Checking each nutrient for ANOVA assumptions
+shapiro.test(nuts$Ammonium.uM) #Not normal
+
+shapiro.test(sqrt((nuts$Ammonium.uM))+1)
+shapiro.test(log10(nuts$Ammonium.uM)+1)
+
+leveneTest(nuts$Ammonium.uM ~ Site * Month, data = nuts) #Equal variance
+
+shapiro.test(nuts$Nitrate.uM) # not normal
+leveneTest(nuts$Nitrate.uM ~ Site * Month, data = nuts) #Equal variance
+
+shapiro.test(nuts$Phosphate.uM) # not normal
+leveneTest(nuts$Phosphate.uM ~ Site * Month, data = nuts) #Equal variance
+
+library(rcompanion)
+#Ammonia
+scheirerRayHare(Ammonium.uM ~ Site * Month, data = nuts) #Sig. Dif. due to Month
+
+library(FSA)
+dunnTest(Ammonium.uM ~ Month, data = nuts, method = "bonferroni")
+# (MAR & OCT) > APR, DEC, & MAY
+
+#boxplot(Ammonium.uM ~ Month, data = nuts)
+
+#Nitrate
+scheirerRayHare(Nitrate.uM ~ Site * Month, data = nuts) #Sig.Dif. due to Month
+
+dunnTest(Nitrate.uM ~ Month, data = nuts, method = "bonferroni")
+#boxplot(Nitrate.uM ~ Month, data = nuts)
+
+#Phosphate
+scheirerRayHare(Phosphate.uM ~ Site * Month, data = nuts) #Significant dif. due to Month
+
+dunnTest(Phosphate.uM ~ Month, data = nuts, method = "bonferroni") #August greater than: Sept.23, Jan, Jul, May
+boxplot(Phosphate.uM ~ Month, data = nuts)
+```
+
+#Bacterial CFUs/100 mL data anaylsis
+```{r}
+bact <- read.csv('/Users/chriscarbon/Desktop/Algae Lab/Thesis_Data/Bacteria Images/Bacteria_Data.csv')
+bact
+
+#Filtering out months with unequal replication across all three sites
+
+#Making a balanced design by filtering out December & March
+bact.bal <- bact %>%
+  filter(!Month %in% c("Dec", "Mar"))
+
+#Testing V. cholerae CFUs for ANOVa assumptions
+shapiro.test(bact.bal$V.cholerae) # Not normal
+log.V.chol <- log(bact.bal$V.cholerae)
+shapiro.test(log.V.chol)
+  
+leveneTest(log.V.chol ~ Site * Species * Season, data = bact.bal) #p = 0.3072, equal variance
+
+#V. cholerae ANOVA & Tukey HSD post hoc
+log.V.chol.aov <- aov(log.V.chol ~ Site * Species, data = bact.bal)
+summary(log.V.chol.aov)
+TukeyHSD(log.V.chol.aov)
+
+#Conducting Scheirer-Ray-Hare test and post hoc Dunn's test on V. parahaemolyticus / V. vulnificus data
+
+V.para.SRH <- scheirerRayHare(V.parahaemolyticus ~ Site * Species, data = bact.bal)
+V.para.SRH #Significant effect detected by Species
+
+
+dunnTest(V.parahaemolyticus ~ Species, data = bact.bal, method = "bonferroni")
+
+#Checking  coliform data for ANOVA assumptions
+shapiro.test(bact.bal$Coliform) # Not normal
+leveneTest(Coliform ~ Site * Species, data = bact.bal) #Unequal variance
+
+#Conducting Scheirer-Ray-Hare tests & post hoc DUnn's tests on coliform data
+coliform.srh <- scheirerRayHare(Coliform ~ Site * Species, data = bact.bal)
+coliform.srh # Significant effect of site, not spp.
+
+dunnTest(Coliform ~ Site, data = bact.bal, method = "bonferroni")
+
+#Checking ANOVa assumptions on E. coli data
+shapiro.test(bact.bal$E.coli) # Nor normal
+leveneTest(E.coli ~ Site * Species, data = bact.bal) #Equal variance
+
+
+#E. coli Scheirer-Ray-Hare Test
+scheirerRayHare(E.coli ~ Site * Species, data = bact.bal) #No significance detected by either factor or interaction term.
+```
+# PAM Fluorometry Data Analysis
+```{r}
+#Read in data
+RLC <- read.csv("./RLC_Data.csv")
+RLC
+
+#FILTERING OUT THE MONTH OF SEPTEMBER 2023 DUE TO INCOMPLETE RELICATION
+library(dplyr)
+RLC <- RLC %>%
+  mutate(Month = as.character(Month))
+
+RLC.bal <- RLC %>%
+  filter(!Month %in% c("Sept.23", "Dec", "Mar"))
+
+RLC.bal
+
+#Checking Y(II) for ANOVA assumptions
+shapiro.test(RLC.bal$Y) #Not normal
+#Checking Y(II) for variance
+leveneTest(Y ~ Site * Month * Species, data = RLC.bal) #data has equal variance.
+
+#Using three-way ANOVA to analyze data Y(II) data, disregarding the non-normal distribution, given ANOVA's robustness to deviations from a normal disribution.
+Y.aov <- aov(Y ~ Site * Month * Species, data = RLC.bal)
+summary(Y.aov) # Significant effects of Site, Month, Species, & MonthxSpecies
+Y.Tukey <- TukeyHSD(Y.aov)
+Y.Tukey 
+
+#Checking ETRmax for ANOVA assumptions
+shapiro.test(RLC.bal$ETRmax) #Not normal
+#Checking variance
+leveneTest(ETRmax ~ Site * Month * Species, data = RLC.bal) #data has equal variance
+
+#ETRmax ANOVA
+ETRmax.aov <- aov(ETRmax ~ Site * Month * Species, data = RLC.bal)
+summary(ETRmax.aov) #Significant effect of all factors and all 2-way interaction effects. 3-way interaction effect not significant.
+ETRmax.Tukey <- TukeyHSD(ETRmax.aov) #JIYC & SHEM had highter values than CHS. Ulva has higher ETRmax than Gracilaria.
+
+#Checking assumptions for Ik data
+shapiro.test(RLC.bal$Ik) # Not normal
+
+leveneTest(sqrt(Ik) ~ Site * Month * Species, data = RLC.bal) # Data has equal variance
+
+Ik.aov <- aov(sqrt(RLC.bal$Ik) ~ Site * Month * Species, data = RLC.bal)
+Ik.aov
+summary(Ik.aov) # Significant differences found due to factors of Site, Month, Species, Site x Month, & Month x Species
+Ik.Tukey <- TukeyHSD(Ik.aov)
+```
+
