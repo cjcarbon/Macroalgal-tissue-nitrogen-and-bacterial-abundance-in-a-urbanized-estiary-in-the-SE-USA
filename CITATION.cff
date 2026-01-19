@@ -1,0 +1,30 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: >-
+  Macroalgal tissue nitrogen and bacterial abundance in an
+  urbanized estuary in the SE USA
+message: >-
+  If you use this dataset, please cite it using the metadata
+  from this file.
+type: dataset
+authors:
+  - given-names: Christopher
+    family-names: Carbon
+    email: carboncj@cofc.edu
+    affiliation: College of Charleston
+  - given-names: Heather
+    family-names: Fullerton
+    email: fullertonhe@cofc.edu
+    affiliation: College of Charleston
+  - given-names: Heather
+    family-names: Spalding
+    email: spaldinghl@cofc.edu
+    affiliation: College of Charleston
+repository-code: >-
+  https://github.com/cjcarbon/Macroalgal-tissue-nitrogen-and-bacterial-abundance-in-a-urbanized-estiary-in-the-SE-USA
+keywords:
+  - Macroalgae
+  - Ecology
+  - Water Quality
