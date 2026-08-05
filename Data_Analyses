@@ -1,0 +1,596 @@
+---
+title: "Carbon et al. 2026 Statistical Analysis and Figure-making code"
+author: "Chris Carbon"
+date: "2026-01-08"
+output: html_document
+---
+
+##Stable Isotope and Tissue Nutrient Data##
+```{r}
+#Read in the raw stable isotope and tissue nutrient data file
+N15 <- read.csv("./Stable Isotope Data/Stable_Isotope_Mastersheet.csv")
+N15
+
+#Constructing a linear mixed effects model to analyze the data, hoping to better account for the repeated measurements at the same sites over the study period.
+
+library(lme4)
+library(lmerTest)
+
+#Creating a lmer for the N15 data. This model will use ALL of th N15 data, because LMERs apparently do not require equal sample size, like ANOVAs do.
+model_n15 <- lmer(
+  N15 ~ Site * Species * Month +
+    (1 | Site:Month),
+  data = N15,
+  control = lmerControl(
+    optimizer = "bobyqa",
+    optCtrl = list(maxfun = 100000)
+  )
+)
+
+anova(model_n15) #The significant three-way interaction effect is the most important result. It indicates that the variables cannot be considered independently from one another, and must all be taken into account when thinking about the data.
+
+summary(model_n15)
+
+n15_emm_site <- emmeans(model_n15,
+                        pairwise ~ Site | Species * Month,
+                        adjust = "tukey")
+pairs(n15_emm_site)
+#Checking assumptions of N15 model
+#Examining residuals
+resid_n15 <- residuals(model_n15)
+fitted_n15 <- fitted(model_n15)
+
+#Checking normality of residuals
+qqnorm(resid_n15)
+qqline(resid_n15)
+#qqline follows the residuals reasonably well
+shapiro.test(resid_phosphate)
+
+#Making a histogram
+hist(resid_n15,
+     breaks = 20,
+     main = "Residuals",
+     xlab = "Residuals")
+#Approximately bell-shaped curve
+
+#Check for homogeneity of varience
+plot(fitted_n15,
+     resid_n15)
+abline(h = 0,
+       lty = 2)
+
+#Creating a lmer for the %N data
+model_Percent.N <- lmer(
+  Percent.N ~ Site * Species * Month +
+    (1 | Site:Month),
+  data = N15,
+  control = lmerControl(
+    optimizer = "bobyqa",
+    optCtrl = list(maxfun = 100000)
+  )
+)
+
+anova(model_Percent.N) #The significant three-way interaction effect is the most important result. It indicates that the variables cannot be considered independently from one another, and must all be taken into account when thinking about the data.
+
+summary(model_Percent.N)
+
+#Post hoc emmeans analysis to uncover significant pairwise comparisons.
+library(emmeans)
+
+PercentN_emm_species <- emmeans(model_Percent.N,
+        pairwise ~ Species | Site * Month,
+        adjust = "tukey")
+
+pairs(PercentN_emm_species)
+#Checking assumptions of Percent.N model
+#Examining residuals
+resid_Percent.N <- residuals(model_Percent.N)
+fitted_Percent.N <- fitted(model_Percent.N)
+
+#Checking normality of residuals
+qqnorm(resid_Percent.N)
+qqline(resid_Percent.N)
+#qqline follows the residuals reasonably well
+shapiro.test(resid_Percent.N)
+
+#Making a histogram
+hist(resid_Percent.N,
+     breaks = 20,
+     main = "Residuals",
+     xlab = "Residuals")
+#Aproximately bell-shaped curve
+
+#Check for homogenity of varience
+plot(fitted_Percent.N,
+     resid_Percent.N)
+abline(h = 0,
+       lty = 2)
+
+#Creating a lmer for the C:N data
+model_C.N <- lmer(
+  C.N ~ Site * Species * Month +
+    (1 | Site:Month),
+  data = N15
+)
+
+anova(model_C.N) #The significant three-way interaction effect is the most important result. It indicates that the variables cannot be considered independently from one another, and must all be taken into account when thinking about the data.
+
+summary(model_C.N)
+
+#Checking assumptions of C.N model
+#Examining residuals
+resid_C.N <- residuals(model_C.N)
+fitted_C.N <- fitted(model_C.N)
+
+#Checking normality of residuals
+qqnorm(resid_C.N)
+qqline(resid_C.N)
+#qqline follows the residuals reasonably well
+shapiro.test(resid_C.N)
+
+#Making a histogram
+hist(resid_C.N,
+     breaks = 20,
+     main = "Residuals",
+     xlab = "Residuals")
+#Aproximately bell-shaped curve
+
+#Check for homogenity of varience
+plot(fitted_C.N,
+     resid_C.N)
+abline(h = 0,
+       lty = 2)
+
+#Post hoc emmeans analysis to uncover significant pairwise comparisons.
+library(emmeans)
+
+pairs(emmeans(model_C.N,
+        pairwise ~ Species | Site * Month,
+        adjust = "tukey"))
+
+```
+
+#Dissolved water nutrient analyses
+```{r}
+#Read in data
+nuts <- read.csv("./Water_Nutrient_Data.csv")
+
+nuts
+
+#Analyzing the dissolved nutrient data with linear mixed effects models.
+
+#Creating a lmer for the NH4+ data
+model_ammonium <- lmer(
+  Ammonium.uM ~ Site  * Month +
+    (1 | Site:Month),
+  data = nuts
+)
+
+anova(model_ammonium) 
+
+summary(model_ammonium)
+
+#Checking assumptions of ammonium model
+#Examining residuals
+resid_ammonium <- residuals(model_ammonium)
+fitted_ammonium <- fitted(model_ammonium)
+
+#CHecking normality of residuals
+qqnorm(resid_ammonium)
+qqline(resid_ammonium)
+#qqline follows the residuals reasonably well
+shapiro.test(resid_ammonium)
+
+#Making a histogram
+hist(resid_ammonium,
+     breaks = 20,
+     main = "Residuals",
+     xlab = "Residuals")
+#Aproximately bell-shaped curve
+
+#Check for homogenity of varience
+plot(fitted_ammonium,
+     resid_ammonium)
+
+abline(h = 0,
+       lty = 2)
+# Plotted residuals are pretty good-looking. Three strange data points on the far right of the plot, these may jut be from 1 month with extra high NH4 levels.
+
+#Post hoc emmeans analysis to uncover significant pairwise comparisons.
+library(emmeans)
+
+# Post hoc not necissary, no significant differences found in ammonium between sites, months, or site x x month.
+#emmeans(model_ammonium,
+  #      pairwise ~ Month | Site * Month,
+   #     adjust = "tukey")
+```
+
+```{r}
+#LMER for nitrate data
+model_nitrate <- lmer(
+  Nitrate.uM ~ Site  * Month +
+    (1 | Site:Month),
+  data = nuts
+)
+
+anova(model_nitrate) #The significant three-way interaction effect is the most important result. It indicates that the variables cannot be considered independently from one another, and must all be taken into account when thinking about the data.
+
+summary(model_nitrate)
+
+#Checking assumptions of ammonium model
+#Examining residuals
+resid_nitrate <- residuals(model_nitrate)
+fitted_nitrate <- fitted(model_nitrate)
+
+#CHecking normality of residuals
+qqnorm(resid_nitrate)
+qqline(resid_nitrate)
+#qqline follows the residuals reasonably well
+shapiro.test(resid_nitrate)
+
+#Making a histogram
+hist(resid_nitrate,
+     breaks = 20,
+     main = "Residuals",
+     xlab = "Residuals")
+#Aproximately bell-shaped curve
+
+#Check for homogenity of varience
+plot(fitted_nitrate,
+     resid_nitrate)
+
+abline(h = 0,
+       lty = 2)
+```
+
+```{r}
+#LMER for phosphate data:
+model_phosphate <- lmer(
+  Phosphate.uM ~ Site  * Month +
+    (1 | Site:Month),
+  data = nuts
+)
+
+anova(model_phosphate) #The significant three-way interaction effect is the most important result. It indicates that the variables cannot be considered independently from one another, and must all be taken into account when thinking about the data.
+
+summary(model_phosphate)
+
+#Checking assumptions of ammonium model
+#Examining residuals
+resid_phosphate <- residuals(model_phosphate)
+fitted_phosphate <- fitted(model_phosphate)
+
+#CHecking normality of residuals
+qqnorm(resid_phosphate)
+qqline(resid_phosphate)
+#qqline follows the residuals reasonably well
+shapiro.test(resid_phosphate)
+
+#Making a histogram
+hist(resid_phosphate,
+     breaks = 20,
+     main = "Residuals",
+     xlab = "Residuals")
+#Aproximately bell-shaped curve
+
+#Check for homogenity of varience
+plot(fitted_phosphate,
+     resid_phosphate)
+abline(h = 0,
+       lty = 2)
+```
+
+#Bacterial CFUs/100 mL data anaylsis
+```{r}
+bact <- read.csv('/Users/chriscarbon/Desktop/Algae Lab/Thesis_Data/Bacteria Images/Bacteria_Data.csv')
+bact
+
+#Filtering out months with unequal replication across all three sites
+
+#Making a balanced design by filtering out December & March
+bact.bal <- bact %>%
+  filter(!Month %in% c("Dec", "Mar"))
+
+#Testing V. cholerae CFUs for ANOVa assumptions
+shapiro.test(bact.bal$V.cholerae) # Not normal
+log.V.chol <- log(bact.bal$V.cholerae)
+shapiro.test(log.V.chol)
+  
+leveneTest(log.V.chol ~ Site * Species * Season, data = bact.bal) #p = 0.3072, equal variance
+
+#V. cholerae ANOVA & Tukey HSD post hoc
+log.V.chol.aov <- aov(log.V.chol ~ Site * Species, data = bact.bal)
+summary(log.V.chol.aov)
+TukeyHSD(log.V.chol.aov)
+
+#Conducting Scheirer-Ray-Hare test and post hoc Dunn's test on V. parahaemolyticus / V. vulnificus data
+
+V.para.SRH <- scheirerRayHare(V.parahaemolyticus ~ Site * Species, data = bact.bal)
+V.para.SRH #Significant effect detected by Species
+
+
+dunnTest(V.parahaemolyticus ~ Species, data = bact.bal, method = "bonferroni")
+
+#Checking  coliform data for ANOVA assumptions
+shapiro.test(bact.bal$Coliform) # Not normal
+leveneTest(Coliform ~ Site * Species, data = bact.bal) #Unequal variance
+
+#Conducting Scheirer-Ray-Hare tests & post hoc DUnn's tests on coliform data
+coliform.srh <- scheirerRayHare(Coliform ~ Site * Species, data = bact.bal)
+coliform.srh # Significant effect of site, not spp.
+
+dunnTest(Coliform ~ Site, data = bact.bal, method = "bonferroni")
+
+#Checking ANOVa assumptions on E. coli data
+shapiro.test(bact.bal$E.coli) # Nor normal
+leveneTest(E.coli ~ Site * Species, data = bact.bal) #Equal variance
+
+
+#E. coli Scheirer-Ray-Hare Test
+scheirerRayHare(E.coli ~ Site * Species, data = bact.bal) #No significance detected by either factor or interaction term.
+```
+#Analyzing the dissolved nutrient data with linear mixed effects models.
+```{r}
+#Creating a lmer for the NH4+ data
+model_ammonium <- lmer(
+  Ammonium.uM ~ Site  * Month +
+    (1 | Site:Month),
+  data = nuts
+)
+
+anova(model_ammonium) 
+
+summary(model_ammonium)
+
+#Checking assumptions of ammonium model
+#Examining residuals
+resid_ammonium <- residuals(model_ammonium)
+fitted_ammonium <- fitted(model_ammonium)
+
+#CHecking normality of residuals
+qqnorm(resid_ammonium)
+qqline(resid_ammonium)
+#qqline follows the residuals reasonably well
+shapiro.test(resid_ammonium)
+
+#Making a histogram
+hist(resid_ammonium,
+     breaks = 20,
+     main = "Residuals",
+     xlab = "Residuals")
+#Aproximately bell-shaped curve
+
+#Check for homogenity of varience
+plot(fitted_ammonium,
+     resid_ammonium)
+
+abline(h = 0,
+       lty = 2)
+# Plotted residuals are pretty good-looking. Three strange data points on the far right of the plot, these may jut be from 1 month with extra high NH4 levels.
+
+#Post hoc emmeans analysis to uncover significant pairwise comparisons.
+library(emmeans)
+
+# Post hoc not necissary, no significant differences found in ammonium between sites, months, or site x x month.
+#emmeans(model_ammonium,
+  #      pairwise ~ Month | Site * Month,
+   #     adjust = "tukey")
+
+#LMER for nitrate data
+model_nitrate <- lmer(
+  Nitrate.uM ~ Site  * Month +
+    (1 | Site:Month),
+  data = nuts
+)
+
+anova(model_nitrate) #The significant three-way interaction effect is the most important result. It indicates that the variables cannot be considered independently from one another, and must all be taken into account when thinking about the data.
+
+summary(model_nitrate)
+
+#Checking assumptions of ammonium model
+#Examining residuals
+resid_nitrate <- residuals(model_nitrate)
+fitted_nitrate <- fitted(model_nitrate)
+
+#CHecking normality of residuals
+qqnorm(resid_nitrate)
+qqline(resid_nitrate)
+#qqline follows the residuals reasonably well
+shapiro.test(resid_nitrate)
+
+#Making a histogram
+hist(resid_nitrate,
+     breaks = 20,
+     main = "Residuals",
+     xlab = "Residuals")
+#Aproximately bell-shaped curve
+
+#Check for homogenity of varience
+plot(fitted_nitrate,
+     resid_nitrate)
+
+abline(h = 0,
+       lty = 2)
+
+#LMER for phosphate data:
+model_phosphate <- lmer(
+  Phosphate.uM ~ Site  * Month +
+    (1 | Site:Month),
+  data = nuts
+)
+
+anova(model_phosphate) #The significant three-way interaction effect is the most important result. It indicates that the variables cannot be considered independently from one another, and must all be taken into account when thinking about the data.
+
+summary(model_phosphate)
+
+#Checking assumptions of ammonium model
+#Examining residuals
+resid_phosphate <- residuals(model_phosphate)
+fitted_phosphate <- fitted(model_phosphate)
+
+#CHecking normality of residuals
+qqnorm(resid_phosphate)
+qqline(resid_phosphate)
+#qqline follows the residuals reasonably well
+shapiro.test(resid_phosphate)
+
+#Making a histogram
+hist(resid_phosphate,
+     breaks = 20,
+     main = "Residuals",
+     xlab = "Residuals")
+#Aproximately bell-shaped curve
+
+#Check for homogenity of varience
+plot(fitted_phosphate,
+     resid_phosphate)
+abline(h = 0,
+       lty = 2)
+
+```
+
+
+#Merge the datasets
+```{r}
+library(purrr)
+#merged.data <- reduce(list(N15.balanced, bact.bal, RLC.bal, nuts), 
+                     # function(x, y) merge(x, y, by = "SampleID"))
+merged.data <- reduce(list(N15.balanced, bact.bal, nuts), 
+                      function(x, y) merge(x, y, by = "SampleID"))
+str(merged.data)
+colnames(merged.data)
+
+
+merged.data <- left_join(merged.data, rainfall, by = "Month")
+merged.data
+nrow(merged.data)
+
+# Run PCA on standardized data
+#Summarizing the data so that there is only one row for each unique row per month, site, and species.
+
+
+
+#Summarizing N15 Data
+N15.summary <- N15 %>%
+  group_by(Site, Month) %>%
+  summarize(
+    N15 = mean(N15, na.rm = TRUE),
+    Percent.N = mean(Percent.N, na.rm = TRUE),
+    C.N = mean(C.N, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+#Summarizing Bacteria Data
+bact.summary <- bact %>%
+  group_by(Site, Month) %>%
+  summarize(
+    E.coli = mean(E.coli, na.rm = TRUE),
+    Coliform = mean(Coliform, na.rm = TRUE),
+    V.cholerae = mean(V.cholerae, na.rm = TRUE),
+    V.parahaemolyticus = mean(V.parahaemolyticus, na.rm = TRUE),
+    Temp = mean(Temp, na.rm = TRUE),
+    Salinity = mean(Salinity, na.rm = TRUE), 
+    .groups = "drop")
+
+#Summarizing Nutrient Data
+nuts.summary <- nuts %>%
+  group_by(Site, Month) %>%
+  summarize(
+    Ammonium.uM = mean(Ammonium.uM, na.rm = TRUE),
+    Nitrate.uM = mean(Nitrate.uM, na.rm = TRUE),
+    Phosphate.uM = mean(Phosphate.uM, na.rm = TRUE),
+    .groups = "drop"
+  )
+  
+#Merge the datasets
+
+library(purrr)
+#merged.data <- reduce(list(N15.balanced, bact.bal, RLC.bal, nuts), 
+                     # function(x, y) merge(x, y, by = "SampleID"))
+merged.data <- reduce(list(N15.balanced, bact.bal, nuts), 
+                      function(x, y) merge(x, y, by = "SampleID"))
+str(merged.data)
+colnames(merged.data)
+
+
+merged.data <- left_join(merged.data, rainfall, by = "Month")
+merged.data
+nrow(merged.data)
+
+# Run PCA on standardized data
+#Summarizing the data so that there is only one row for each unique row per month, site, and species.
+
+#Summarizing RLC Data
+#RLC.bal.summary <- RLC.bal %>%
+ # group_by(Site, Month, Species) %>%
+  #summarize(
+   # Y = mean(Y, na.rm = TRUE),
+    #ETRmax = mean(ETRmax, na.rm = TRUE),
+    #Ik = mean(Ik, na.rm = TRUE),
+    #.groups = "drop"
+  #)
+
+#Summarizing N15 Data
+N15.summary <- N15 %>%
+  group_by(Site, Month) %>%
+  summarize(
+    N15 = mean(N15, na.rm = TRUE),
+    Percent.N = mean(Percent.N, na.rm = TRUE),
+    C.N = mean(C.N, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+#Summarizing Bacteria Data
+bact.summary <- bact %>%
+  group_by(Site, Month) %>%
+  summarize(
+    E.coli = mean(E.coli, na.rm = TRUE),
+    Coliform = mean(Coliform, na.rm = TRUE),
+    V.cholerae = mean(V.cholerae, na.rm = TRUE),
+    V.parahaemolyticus = mean(V.parahaemolyticus, na.rm = TRUE),
+    Temp = mean(Temp, na.rm = TRUE),
+    Salinity = mean(Salinity, na.rm = TRUE), 
+    .groups = "drop")
+
+#Summarizing Nutrient Data
+nuts.summary <- nuts %>%
+  group_by(Site, Month) %>%
+  summarize(
+    Ammonium.uM = mean(Ammonium.uM, na.rm = TRUE),
+    Nitrate.uM = mean(Nitrate.uM, na.rm = TRUE),
+    Phosphate.uM = mean(Phosphate.uM, na.rm = TRUE),
+    .groups = "drop"
+  )
+  
+
+#Now trying to use the inner.join() function to merge the datasets.
+merged.data <- N15.summary %>%
+  inner_join(bact.summary, by = c("Site", "Month")) %>%
+  #inner_join(RLC.bal.summary, by = c("Site", "Month", "Species")) %>%
+  inner_join(nuts.summary, by = c("Site", "Month")) %>%
+  inner_join(rainfall, by = "Month")
+
+#Conducting PCA on merged data
+library(dplyr)
+#str(merged.data)
+#summary(merged.data)
+merged.data
+all.vars.PCA <- merged.data %>%
+  dplyr::select(N15, Percent.N, C.N, 
+         E.coli, Coliform, V.cholerae, V.parahaemolyticus,
+         Salinity, Temp,
+        # Y, ETRmax, Ik, 
+        Rainfall.cm, Ammonium.uM, Nitrate.uM, Phosphate.uM)
+
+apply(all.vars.PCA, 2, function(x) var(x, na.rm = TRUE))  # Should return all > 0
+any(is.na(all.vars.PCA))  # Should be FALSE -> IT IS!
+
+all.vars.PCA.result <- prcomp(all.vars.PCA, center = TRUE, scale. = TRUE)
+
+all.vars.PCA.result
+summary(all.vars.PCA.result)
+
+#Extracting the loading values of the PCA
+all.vars.PCA.result$rotation
+```
+
